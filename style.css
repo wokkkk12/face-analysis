@@ -1,1 +1,146 @@
-/* Add styles here */
+:root {
+    --bg-color: #0f172a;
+    --card-bg: rgba(30, 41, 59, 0.7);
+    --accent-color: #38bdf8;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    line-height: 1.6;
+    padding: 1rem;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+header {
+    text-align: center;
+    margin: 2rem 0;
+}
+
+header h1 {
+    font-size: 2rem;
+    background: linear-gradient(to right, #38bdf8, #818cf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* 광고 영역 */
+.ad-placeholder {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px dashed var(--glass-border);
+    height: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--text-secondary);
+    margin: 1.5rem 0;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+}
+
+/* 업로드 섹션 */
+.drop-zone {
+    border: 2px dashed var(--glass-border);
+    border-radius: 1.5rem;
+    padding: 3rem 1.5rem;
+    text-align: center;
+    background: var(--card-bg);
+    cursor: pointer;
+}
+
+/* 이미지 및 캔버스 */
+.image-wrapper {
+    position: relative;
+    max-width: 100%;
+    margin-bottom: 1.5rem;
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+#previewImage {
+    width: 100%;
+    display: block;
+}
+
+#faceCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* 스캔 라인 애니메이션 */
+.scan-line {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--accent-color);
+    box-shadow: 0 0 10px var(--accent-color);
+    animation: scan 3s infinite ease-in-out;
+}
+
+@keyframes scan {
+    0% { top: 0; }
+    100% { top: 100%; }
+}
+
+/* 결과 카드 */
+.grid-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 600px) {
+    .grid-container { grid-template-columns: 1fr; }
+}
+
+.card {
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    padding: 1.2rem;
+    border-radius: 1rem;
+}
+
+.card-header {
+    color: var(--accent-color);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.disclaimer {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 2rem;
+    text-align: center;
+}
+
+.reset-btn {
+    display: block;
+    width: 100%;
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: var(--accent-color);
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.hidden { display: none; }
