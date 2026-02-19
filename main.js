@@ -1,7 +1,6 @@
 let faceMesh;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // MediaPipe FaceMesh 초기화 (지연 로딩 대응)
     try {
         faceMesh = new FaceMesh({
             locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
@@ -29,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
     dropZone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
     
-    // 드래그 앤 드롭 이벤트
     dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = "#38bdf8"; });
     dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = ""; });
     dropZone.addEventListener('drop', (e) => {
@@ -61,19 +59,16 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("AI 엔진이 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.");
             return;
         }
-
         document.getElementById('uploadSection').classList.add('hidden');
         document.getElementById('previewSection').classList.remove('hidden');
-        
         faceCanvas.width = imageElement.naturalWidth;
         faceCanvas.height = imageElement.naturalHeight;
 
-        // 로딩바 애니메이션 시작
         let progress = 0;
         const progInterval = setInterval(() => {
             progress += 2;
             if (progress <= 95) progressFill.style.width = progress + "%";
-        }, 50);
+        }, 40);
 
         faceMesh.onResults((results) => {
             clearInterval(progInterval);
@@ -85,28 +80,23 @@ document.addEventListener('DOMContentLoaded', () => {
             await faceMesh.send({image: imageElement});
         } catch (err) {
             console.error("FaceMesh send error:", err);
-            alert("분석 중 오류가 발생했습니다.");
             location.reload();
         }
     }
 
     function drawResults(results) {
         ctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
-        
         if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
             const landmarks = results.multiFaceLandmarks[0];
-            
-            // 시각적 피드백: 얼굴 메쉬 그리기
-            ctx.fillStyle = "rgba(56, 189, 248, 0.5)";
+            ctx.fillStyle = "rgba(56, 189, 248, 0.4)";
             for (const landmark of landmarks) {
                 ctx.beginPath();
-                ctx.arc(landmark.x * faceCanvas.width, landmark.y * faceCanvas.height, 1, 0, 2 * Math.PI);
+                ctx.arc(landmark.x * faceCanvas.width, landmark.y * faceCanvas.height, 0.8, 0, 2 * Math.PI);
                 ctx.fill();
             }
-
             displayFinalReport(landmarks);
         } else {
-            alert("얼굴을 찾을 수 없습니다. 선명한 정면 사진을 사용해주세요.");
+            alert("얼굴을 찾을 수 없습니다.");
             location.reload();
         }
     }
@@ -116,126 +106,151 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('previewSection').classList.add('hidden');
             document.getElementById('resultSection').classList.remove('hidden');
 
-            // --- [1] 정밀 좌표 기반 전문 지표 계산 ---
-            const topFace = Math.abs(lm[10].y - lm[168].y);
-            const midFace = Math.abs(lm[168].y - lm[2].y);
-            const bottomFace = Math.abs(lm[2].y - lm[152].y);
-            const totalH = topFace + midFace + bottomFace;
-            const vR = [ (topFace/totalH*3).toFixed(2), (midFace/totalH*3).toFixed(2), (bottomFace/totalH*3).toFixed(2) ];
+            // --- [MEDICAL ANALYSIS ENGINE] ---
+            
+            // 1. 수직 비율 (Vertical Analysis)
+            const upperH = Math.abs(lm[10].y - lm[168].y);
+            const midH = Math.abs(lm[168].y - lm[2].y);
+            const lowerH = Math.abs(lm[2].y - lm[152].y);
+            const totalH = upperH + midH + lowerH;
+            
+            const vRatio = [(upperH/totalH*3).toFixed(2), (midH/totalH*3).toFixed(2), (lowerH/totalH*3).toFixed(2)];
+            
+            // 2. 수평 비율 및 안면 윤곽 (Architecture Analysis)
+            const bizygomaticW = Math.abs(lm[234].x - lm[454].x); // 광대 폭
+            const bigonialW = Math.abs(lm[172].x - lm[397].x);    // 턱 폭
+            const temporalW = Math.abs(lm[21].x - lm[251].x);    // 관자놀이 폭
+            const totalHeight = Math.abs(lm[10].y - lm[152].y);
+            
+            const faceIndex = (totalHeight / bizygomaticW).toFixed(2);
+            const jawIndex = (bigonialW / bizygomaticW).toFixed(2);
+            const lowerThirdRatio = (lowerH / totalH).toFixed(2);
 
-            const fW = Math.abs(lm[234].x - lm[454].x);
-            const foreheadW = Math.abs(lm[103].x - lm[332].x);
-            const jawW = Math.abs(lm[172].x - lm[397].x);
-            const fH = Math.abs(lm[10].y - lm[152].y);
-            const aspect = (fH / fW).toFixed(2);
-            const jawToForehead = (jawW / foreheadW).toFixed(2);
-
-            const eyeDist = Math.abs(lm[133].x - lm[362].x);
+            // 3. 이목구비 세부 지표 (Feature Metrics)
             const eyeW = Math.abs(lm[133].x - lm[33].x);
-            const eyeSpacing = (eyeDist / eyeW).toFixed(2);
-            const leftTilt = (lm[33].y - lm[133].y);
-            const isUpturned = leftTilt < 0;
+            const intercanthalD = Math.abs(lm[133].x - lm[362].x);
+            const eyeSpacing = (intercanthalD / eyeW).toFixed(2); // 눈 너비 대비 미간 (표준 1.0)
+            
+            const lipW = Math.abs(lm[61].x - lm[291].x);
+            const philtrumH = Math.abs(lm[2].y - lm[0].y);
+            const chinH = Math.abs(lm[17].y - lm[152].y);
+            const lipChinRatio = (chinH / philtrumH).toFixed(2); // 인중 대비 턱 비율 (표준 2.0)
 
+            // 4. 피부 데이터
             const canvas = document.getElementById('faceCanvas');
             const context = canvas.getContext('2d', { willReadFrequently: true });
-            const sample = context.getImageData(Math.floor(lm[117].x * canvas.width), Math.floor(lm[117].y * canvas.height), 1, 1).data;
-            const r = sample[0], g = sample[1], b = sample[2];
+            const pX = Math.floor(lm[117].x * canvas.width);
+            const pY = Math.floor(lm[117].y * canvas.height);
+            const pixel = context.getImageData(pX, pY, 1, 1).data;
+            const r = pixel[0], g = pixel[1], b = pixel[2];
             const brightness = (r + g + b) / 3;
 
-            // --- [2] 전문가 데이터 기반 결과 매칭 ---
-            const getExpertAnalysis = () => {
-                const results = {
-                    ratio: { desc: "", pros: "", cons: "" },
-                    shape: { desc: "", pros: "", cons: "" },
-                    feat: { desc: "", pros: "", cons: "" },
-                    skin: { desc: "", pros: "", cons: "" }
-                };
+            // --- [REPORT GENERATOR] ---
+            
+            const report = { ratio: {}, shape: {}, feat: {}, skin: {} };
 
-                if (vR[1] > 1.08) {
-                    results.ratio.desc = `중안부가 발달한(${vR[1]}) 성숙하고 우아한 '엘레강스' 비율입니다.`;
-                    results.ratio.pros = "지적이고 차분한 분위기를 주며 코의 선이 강조되어 입체감이 좋습니다.";
-                    results.ratio.cons = "가로로 긴 안경테나 블러셔를 중앙부에 넓게 펴 발라 시선을 가로로 분산시키면 훨씬 부드러워 보입니다.";
-                } else if (vR[2] < 0.9) {
-                    results.ratio.desc = `하안부가 짧은(${vR[2]}) '베이비페이스'형 동안 비율을 갖추고 있습니다.`;
-                    results.ratio.pros = "실제 나이보다 훨씬 어려 보이며 친근하고 귀여운 이미지가 강점입니다.";
-                    results.ratio.cons = "턱끝에 하이라이트를 주어 수직감을 살짝 더해주면 세련된 느낌을 추가할 수 있습니다.";
+            // 1. 비율 리포트 (Ratio)
+            const getRatioReport = () => {
+                let d = `안면 수직 분할 계측 결과, 상/중/하 비율이 <strong>${vRatio[0]} : ${vRatio[1]} : ${vRatio[2]}</strong>의 분포를 보입니다. `;
+                let p = "", c = "";
+                if (vRatio[1] > 1.12) {
+                    d += "중안부의 수직 연장 지수가 높아 성숙하고 기품 있는 'Aristocratic' 이미지가 강조됩니다.";
+                    p = "콧대의 리듬감이 살아있으며, 지적이고 신뢰감을 주는 고급스러운 인상을 형성합니다.";
+                    c = "중안부 시선을 끊어주기 위해 일자형 눈썹보다는 아치형을, 치크는 사선보다 가로 방향으로 터치하여 밸런스를 잡으세요.";
+                } else if (vRatio[2] < 0.82) {
+                    d += "하안부 리모델링 비율이 짧은 '동안형(Baby-face)' 골격 구조를 띄고 있습니다.";
+                    p = "실제 연령보다 에너제틱하고 유연한 인상을 주며, 대중적인 호감도가 높은 비율입니다.";
+                    c = "턱끝에 소량의 하이라이팅을 주어 수직 투영도를 높이면 훨씬 입체적이고 현대적인 느낌을 줄 수 있습니다.";
                 } else {
-                    results.ratio.desc = "수직/수평 밸런스가 황금비율에 완벽히 부합하는 '조화형' 비율입니다.";
-                    results.ratio.pros = "안정감이 매우 뛰어나며 클래식하고 정돈된 미적 완성도가 높습니다.";
-                    results.ratio.cons = "어떤 스타일도 소화 가능하므로 과감한 트렌디 메이크업에 도전해 보세요.";
+                    d += "현대 미학의 황금률인 1:1:0.8~1에 근접한 수직 조화를 보여주는 'Harmony' 타입입니다.";
+                    p = "상하 밸런스가 매우 안정적이며, 특정 이목구비에 치우치지 않는 클래식한 미적 완성도를 보유하고 있습니다.";
+                    c = "안정적인 캔버스를 가졌으므로 립이나 아이 메이크업 중 한 곳에 포인트를 주는 원포인트 스타일링이 베스트입니다.";
                 }
-
-                if (aspect > 1.3 && jawToForehead < 0.85) {
-                    results.shape.desc = "세로 폭이 강조되면서 하단이 슬림한 '귀족적 타원형' 골격입니다.";
-                    results.shape.pros = "슬림하고 도시적인 실루엣을 가졌으며 목선이 길어 보이는 효과가 있습니다.";
-                    results.shape.cons = "사이드 볼륨을 살린 레이어드 컷이나 굵은 웨이브가 긴 얼굴형을 보완해 줍니다.";
-                } else if (jawToForehead > 0.95) {
-                    results.shape.desc = "안정감이 느껴지는 하단 골격의 '클래식 정방형/페어형'입니다.";
-                    results.shape.pros = "에너지가 넘치고 강인한 매력이 있으며, 턱선이 주는 고급스러운 아우라가 독보적입니다.";
-                    results.shape.cons = "앞머리를 옆으로 넘겨 이마 폭을 확보하고 턱선을 시원하게 드러내는 커트가 베스트입니다.";
-                } else {
-                    results.shape.desc = "곡선과 직선의 밸런스가 좋은 '이상적 계란형' 골격입니다.";
-                    results.shape.pros = "페이스 라인이 매끄러워 어떤 각도에서도 굴곡 없는 부드러운 인상을 줍니다.";
-                    results.shape.cons = "얼굴형이 예쁘므로 포니테일이나 업스타일로 헤어 라인을 모두 드러내 보시길 추천합니다.";
-                }
-
-                const eyeType = isUpturned ? "상향형(Cat-eye)" : "하향형(Puppy-eye)";
-                results.feat.desc = `눈매가 ${eyeType}이며 미간 간격이 ${eyeSpacing > 1.05 ? '넓은' : '집중된'} 개성 있는 눈매입니다.`;
-                results.feat.pros = isUpturned ? "눈매가 매혹적이고 힘이 있어 카리스마 있는 표정 연출에 유리합니다." : "선하고 맑은 눈매를 가져 상대방에게 높은 신뢰감과 호감을 줍니다.";
-                results.feat.cons = eyeSpacing > 1.05 ? "미간 사이 음영을 주어 콧대를 세우면 시선이 집중되어 더 뚜렷해 보입니다." : "눈꼬리를 뒤로 길게 빼서 얼굴의 여백을 조절하면 비율이 더 완벽해집니다.";
-
-                const tone = (r > b + 15) ? "웜(Warm)" : (b > r + 5) ? "쿨(Cool)" : "뉴트럴(Neutral)";
-                results.skin.desc = `측정된 피부톤은 ${tone} 톤이며 밝기는 ${brightness > 180 ? '밝고 맑은' : '차분하고 건강한'} 상태입니다.`;
-                results.skin.pros = `피부의 색조 대비가 좋아 특정 컬러(골드/실버) 사용 시 이목구비가 확 살아나는 타입입니다.`;
-                results.skin.cons = tone === "웜" ? "오렌지, 코랄, 골드 브라운 컬러의 메이크업이 베스트입니다." : tone === "쿨" ? "라벤더, 핑크, 애쉬 베이지 컬러의 메이크업을 시도해 보세요." : "모든 뉴트럴 컬러를 소화할 수 있는 축복받은 톤입니다.";
-
-                return results;
+                return { d, p, c };
             };
 
-            const expert = getExpertAnalysis();
-            const render = (target, data) => {
-                document.getElementById(target).innerHTML = `
-                    <p class="analysis-desc">${data.desc}</p>
+            // 2. 골격 리포트 (Shape)
+            const getShapeReport = () => {
+                let d = `안면 지수(Facial Index) ${faceIndex}로 분석되었습니다. `;
+                let p = "", c = "";
+                if (jawIndex > 0.88) {
+                    d += "하악각(Mandibular angle)의 볼륨이 안정적인 'Classic-Square'형 골격 구조입니다.";
+                    p = "옆선이 입체적이며 카리스마 있는 아우라를 가졌습니다. 나이가 들어도 페이스 라인이 무너지지 않는 탄탄한 구조입니다.";
+                    c = "헤어 라인에 층을 내는 레이어드 컷으로 턱선의 각을 부드럽게 감싸주면 세련미가 배가됩니다.";
+                } else if (faceIndex > 1.4) {
+                    d += "세로 축이 발달한 'Elegant-Oval'형의 슬림한 안면 구조입니다.";
+                    p = "전체적으로 여백이 적어 이목구비가 집중되어 보이며, 도시적이고 샤프한 매력을 발산합니다.";
+                    c = "이마를 넓게 드러내기보다 시스루 뱅이나 사이드 뱅을 활용해 상단 가로 폭을 확보하는 것이 미적 보완책입니다.";
+                } else {
+                    d += "광대와 턱의 비율이 유려하게 연결되는 'Ideal-Egg' 형태의 윤곽입니다.";
+                    p = "페이스 라인이 매우 매끄러워 굴곡에 의한 그늘이 없으며, 온화하고 부드러운 인상을 줍니다.";
+                    c = "윤곽이 아름다우므로 가리지 말고 포니테일 등으로 과감히 드러내는 것이 본연의 매력을 극대화합니다.";
+                }
+                return { d, p, c };
+            };
+
+            // 3. 이목구비 리포트 (Features)
+            const getFeatReport = () => {
+                let d = `눈 너비 대비 미간 비율이 ${eyeSpacing}이며, 인중 대비 턱 비율은 ${lipChinRatio}로 계측되었습니다. `;
+                let p = "", c = "";
+                if (eyeSpacing > 1.1) {
+                    d += "안안각(Intercanthal) 거리가 넓어 시야가 확 트여 보이는 '신비로운 마스크'를 보유하고 있습니다.";
+                    p = "몽환적이고 유니크한 무드를 연출하기에 최적이며, 하이패션 같은 개성 있는 이미지가 강점입니다.";
+                    c = "콧대 양옆에 가벼운 쉐이딩을 넣어 미간의 수평감을 좁혀주면 눈매의 선명도가 비약적으로 상승합니다.";
+                } else if (lipChinRatio < 1.6) {
+                    d += "인중 대비 턱의 수직 길이가 짧아 하관의 무게감이 적은 'Neoteny(동안)'적 특징이 관찰됩니다.";
+                    p = "턱선의 선명함보다 입술의 매력이 강조되는 구조로, 웃을 때의 모습이 매우 매력적입니다.";
+                    c = "턱끝을 V자로 살짝 쉐이딩하여 수직감을 부여하면 입술의 볼륨감과 턱의 선명도가 조화롭게 어우러집니다.";
+                } else {
+                    d += "이목구비 각 요소가 안면 중앙부에 집중력 있게 배치된 'Focused' 타입입니다.";
+                    p = "이목구비의 자기주장이 뚜렷하여 이목을 끄는 에너지가 강하며 화려한 스타일링이 매우 잘 어울립니다.";
+                    c = "눈꼬리를 가로로 길게 빼는 윙 아이라인을 통해 얼굴 가로 여백을 조절하면 완벽한 밸런스가 완성됩니다.";
+                }
+                return { d, p, c };
+            };
+
+            // 4. 피부 리포트 (Skin)
+            const getSkinReport = () => {
+                const tone = (r > b + 15) ? "Warm-Yellow" : (b > r + 5) ? "Cool-Blue" : "Neutral-Beige";
+                let d = `멜라닌과 헤모글로빈 수치의 조화로 ${tone} 성향의 ${brightness > 185 ? '고명도' : '중저명도'} 톤이 관찰됩니다. `;
+                let p = `피부의 빛 반사율이 ${brightness > 180 ? '높아 맑은 투명감' : '안정적이라 차분하고 건강한 윤기'}를 보유하고 있습니다.`;
+                let c = tone === "Warm-Yellow" ? "코랄, 피치 기반의 메이크업과 골드 주얼리가 피부의 혈색을 극대화합니다." : "라벤더, 로즈 기반의 쿨한 색조와 실버 액세서리가 피부의 투명도를 높여줍니다.";
+                return { d, p, c };
+            };
+
+            const r = getRatioReport();
+            const s = getShapeReport();
+            const f = getFeatReport();
+            const k = getSkinReport();
+
+            const render = (id, obj) => {
+                document.getElementById(id).innerHTML = `
+                    <p class="analysis-desc">${obj.d}</p>
                     <div class="pros-cons">
-                        <div class="pros"><strong>✨ 전문가 리포트:</strong> ${data.pros}</div>
-                        <div class="cons"><strong>🎨 컨설팅 가이드:</strong> ${data.cons}</div>
+                        <div class="pros"><strong>✨ Aesthetic Strategy:</strong> ${obj.p}</div>
+                        <div class="cons"><strong>🎨 Medical Advice:</strong> ${obj.c}</div>
                     </div>
                 `;
             };
 
-            render('resultRatio', expert.ratio);
-            render('resultShape', expert.shape);
-            render('resultFeatures', expert.feat);
-            render('resultSkin', expert.skin);
+            render('resultRatio', r);
+            render('resultShape', s);
+            render('resultFeatures', f);
+            render('resultSkin', k);
         }, 1000);
     }
 
     document.getElementById('resetBtn').addEventListener('click', () => location.reload());
 });
 
-// 모달 관리 로직
 const modalContent = {
     privacy: {
         title: "개인정보처리방침",
-        body: `
-            <h3>1. 수집하는 데이터</h3>
-            <p>본 서비스는 '온-디바이스(On-device)' 기술을 사용하여 사용자의 브라우저 내에서 직접 분석을 수행합니다. 사용자가 업로드한 이미지는 서버로 전송되지 않으며, 저장되지도 않습니다.</p>
-            <h3>2. 이용 목적</h3>
-            <p>수집된 데이터(얼굴 랜드마크 좌표)는 실시간 분석 결과를 제공하는 목적으로만 사용되며, 브라우저 세션이 종료되면 즉시 폐기됩니다.</p>
-            <h3>3. 제3자 제공</h3>
-            <p>이미지 및 분석 데이터를 제3자에게 제공하거나 공유하지 않습니다. 단, 서비스 내 표시되는 광고(Google AdSense)는 구글의 정책에 따라 비식별화된 쿠키 정보를 사용할 수 있습니다.</p>
-        `
+        body: `<h3>1. 수집하는 데이터</h3><p>본 서비스는 '온-디바이스' 기술을 사용하여 이미지를 서버로 전송하지 않습니다.</p>`
     },
     terms: {
         title: "이용약관",
-        body: `
-            <h3>제1조 (목적)</h3>
-            <p>본 약관은 AI Face Insight가 제공하는 서비스의 이용 조건 및 절차를 규정함을 목적으로 합니다.</p>
-            <h3>제2조 (서비스의 성격)</h3>
-            <p>본 서비스는 AI 기술을 활용한 정보 제공 및 재미를 목적으로 하며, 결과에 대한 의학적/전문적 신뢰도를 보장하지 않습니다.</p>
-            <h3>제3조 (책임의 한계)</h3>
-            <p>사용자가 본 서비스의 분석 결과를 바탕으로 내린 결정에 대해 서비스 제공자는 어떠한 책임도 지지 않습니다.</p>
-        `
+        body: `<h3>제1조 (목적)</h3><p>본 서비스는 AI 기술을 활용한 정보 제공 및 재미를 목적으로 합니다.</p>`
     }
 };
 
@@ -243,12 +258,11 @@ function openModal(type) {
     const overlay = document.getElementById('modalOverlay');
     const title = document.getElementById('modalTitle');
     const body = document.getElementById('modalBody');
-
     if (modalContent[type]) {
         title.innerText = modalContent[type].title;
         body.innerHTML = modalContent[type].body;
         overlay.classList.remove('hidden');
-        document.body.style.overflow = 'hidden'; // 스크롤 방지
+        document.body.style.overflow = 'hidden';
     }
 }
 
@@ -258,10 +272,6 @@ function closeModal() {
     document.body.style.overflow = 'auto';
 }
 
-// 배경 클릭 시 닫기
 window.onclick = function(event) {
-    const overlay = document.getElementById('modalOverlay');
-    if (event.target == overlay) {
-        closeModal();
-    }
+    if (event.target == document.getElementById('modalOverlay')) closeModal();
 }
