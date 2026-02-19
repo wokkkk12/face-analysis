@@ -1,21 +1,30 @@
-const faceMesh = new FaceMesh({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
-});
-
-faceMesh.setOptions({
-    maxNumFaces: 1,
-    refineLandmarks: true,
-    minDetectionConfidence: 0.5,
-    minTrackingConfidence: 0.5
-});
+let faceMesh;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // MediaPipe FaceMesh 초기화 (지연 로딩 대응)
+    try {
+        faceMesh = new FaceMesh({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+        });
+
+        faceMesh.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+    } catch (e) {
+        console.error("FaceMesh initialization failed:", e);
+    }
+
     const fileInput = document.getElementById('fileInput');
     const dropZone = document.getElementById('dropZone');
     const previewImage = document.getElementById('previewImage');
     const faceCanvas = document.getElementById('faceCanvas');
     const ctx = faceCanvas.getContext('2d');
     const progressFill = document.querySelector('.progress-fill');
+
+    if (!dropZone) return;
 
     dropZone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
@@ -32,6 +41,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleFiles(files) {
         if (files.length > 0) {
             const file = files[0];
+            if (!file.type.startsWith('image/')) {
+                alert('이미지 파일만 업로드 가능합니다.');
+                return;
+            }
             const reader = new FileReader();
             reader.onload = (e) => {
                 const img = new Image();
@@ -44,6 +57,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function analyzeFace(imageElement) {
+        if (!faceMesh) {
+            alert("AI 엔진이 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.");
+            return;
+        }
+
         document.getElementById('uploadSection').classList.add('hidden');
         document.getElementById('previewSection').classList.remove('hidden');
         
@@ -63,7 +81,13 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => drawResults(results), 500);
         });
         
-        await faceMesh.send({image: imageElement});
+        try {
+            await faceMesh.send({image: imageElement});
+        } catch (err) {
+            console.error("FaceMesh send error:", err);
+            alert("분석 중 오류가 발생했습니다.");
+            location.reload();
+        }
     }
 
     function drawResults(results) {
