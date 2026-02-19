@@ -137,14 +137,28 @@
             <div class="footer-content">
                 <p>&copy; 2026 AI Face Insight. All rights reserved.</p>
                 <div class="footer-links">
-                    <a href="#">개인정보처리방침</a>
-                    <a href="#">이용약관</a>
+                    <a href="javascript:void(0)" onclick="openModal('privacy')">개인정보처리방침</a>
+                    <a href="javascript:void(0)" onclick="openModal('terms')">이용약관</a>
                     <a href="#">문의하기</a>
                 </div>
                 <p class="disclaimer">본 서비스는 정보 제공 및 재미를 위한 목적으로 제공되며, 의학적 진단을 대체할 수 없습니다.</p>
             </div>
         </footer>
     </div>
+
+    <!-- 모달 창 -->
+    <div id="modalOverlay" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">정책 내용</h2>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- 내용이 여기에 들어갑니다 -->
+            </div>
+        </div>
+    </div>
+
     <script src="main.js"></script>
 </body>
 </html>

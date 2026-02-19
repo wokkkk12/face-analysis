@@ -117,3 +117,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('resetBtn').addEventListener('click', () => location.reload());
 });
+
+// 모달 관리 로직
+const modalContent = {
+    privacy: {
+        title: "개인정보처리방침",
+        body: `
+            <h3>1. 수집하는 데이터</h3>
+            <p>본 서비스는 '온-디바이스(On-device)' 기술을 사용하여 사용자의 브라우저 내에서 직접 분석을 수행합니다. 사용자가 업로드한 이미지는 서버로 전송되지 않으며, 저장되지도 않습니다.</p>
+            <h3>2. 이용 목적</h3>
+            <p>수집된 데이터(얼굴 랜드마크 좌표)는 실시간 분석 결과를 제공하는 목적으로만 사용되며, 브라우저 세션이 종료되면 즉시 폐기됩니다.</p>
+            <h3>3. 제3자 제공</h3>
+            <p>이미지 및 분석 데이터를 제3자에게 제공하거나 공유하지 않습니다. 단, 서비스 내 표시되는 광고(Google AdSense)는 구글의 정책에 따라 비식별화된 쿠키 정보를 사용할 수 있습니다.</p>
+        `
+    },
+    terms: {
+        title: "이용약관",
+        body: `
+            <h3>제1조 (목적)</h3>
+            <p>본 약관은 AI Face Insight가 제공하는 서비스의 이용 조건 및 절차를 규정함을 목적으로 합니다.</p>
+            <h3>제2조 (서비스의 성격)</h3>
+            <p>본 서비스는 AI 기술을 활용한 정보 제공 및 재미를 목적으로 하며, 결과에 대한 의학적/전문적 신뢰도를 보장하지 않습니다.</p>
+            <h3>제3조 (책임의 한계)</h3>
+            <p>사용자가 본 서비스의 분석 결과를 바탕으로 내린 결정에 대해 서비스 제공자는 어떠한 책임도 지지 않습니다.</p>
+        `
+    }
+};
+
+function openModal(type) {
+    const overlay = document.getElementById('modalOverlay');
+    const title = document.getElementById('modalTitle');
+    const body = document.getElementById('modalBody');
+
+    if (modalContent[type]) {
+        title.innerText = modalContent[type].title;
+        body.innerHTML = modalContent[type].body;
+        overlay.classList.remove('hidden');
+        document.body.style.overflow = 'hidden'; // 스크롤 방지
+    }
+}
+
+function closeModal() {
+    const overlay = document.getElementById('modalOverlay');
+    overlay.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+// 배경 클릭 시 닫기
+window.onclick = function(event) {
+    const overlay = document.getElementById('modalOverlay');
+    if (event.target == overlay) {
+        closeModal();
+    }
+}
