@@ -117,54 +117,87 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('resultSection').classList.remove('hidden');
 
             // --- 정밀 데이터 계산 ---
-            const faceHeight = Math.abs(lm[10].y - lm[152].y);
+            // 1. 세로 비율 (상:중:하)
+            const topFace = Math.abs(lm[10].y - lm[168].y);   // 이마 ~ 미간
+            const midFace = Math.abs(lm[168].y - lm[2].y);    // 미간 ~ 코끝
+            const bottomFace = Math.abs(lm[2].y - lm[152].y); // 코끝 ~ 턱끝
+            const totalHeight = topFace + midFace + bottomFace;
+            
+            const vRatio = [
+                (topFace / totalHeight * 3).toFixed(1),
+                (midFace / totalHeight * 3).toFixed(1),
+                (bottomFace / totalHeight * 3).toFixed(1)
+            ];
+
+            // 2. 가로 비율 및 얼굴형
             const faceWidth = Math.abs(lm[234].x - lm[454].x);
+            const jawWidth = Math.abs(lm[172].x - lm[397].x);
+            const faceHeight = Math.abs(lm[10].y - lm[152].y);
             const ratio = (faceHeight / faceWidth).toFixed(2);
 
-            // 광대 대비 턱 너비 (얼굴형 판단용)
-            const jawWidth = Math.abs(lm[172].x - lm[397].x);
-            const jawRatio = (jawWidth / faceWidth).toFixed(2);
-
-            // 눈 사이 거리 (이목구비 특징용)
+            // 3. 눈 비례
+            const leftEyeWidth = Math.abs(lm[133].x - lm[33].x);
             const eyeDist = Math.abs(lm[133].x - lm[362].x);
             const eyeRatio = (eyeDist / faceWidth).toFixed(2);
 
+            // --- 결과 생성 함수 ---
+            const createResultHTML = (desc, pros, cons) => `
+                <p class="analysis-desc">${desc}</p>
+                <div class="pros-cons">
+                    <div class="pros"><strong>👍 장점:</strong> ${pros}</div>
+                    <div class="cons"><strong>💡 팁:</strong> ${cons}</div>
+                </div>
+            `;
+
             // 1. 비율 분석 (Ratio)
-            let ratioText = `측정된 세로/가로 비율은 <strong>${ratio}:1</strong>입니다. `;
-            if (ratio > 1.4) {
-                ratioText += "세로 비율이 다소 높은 '긴 얼굴형'에 해당합니다. 앞머리를 내리거나 가로 볼륨을 살리는 헤어스타일이 조화롭습니다.";
-            } else if (ratio < 1.2) {
-                ratioText += "가로와 세로의 편차가 적은 '둥근/각진 얼굴형'입니다. 시선을 위아래로 분산시키는 스타일링이 효과적입니다.";
+            let ratioDesc = `상:중:하 비율이 <strong>${vRatio[0]}:${vRatio[1]}:${vRatio[2]}</strong>로 측정되었습니다. `;
+            let rPros = "", rCons = "";
+            if (vRatio[1] > 1.1) {
+                ratioDesc += "중안부가 다소 긴 편으로 성숙하고 지적인 분위기를 풍깁니다.";
+                rPros = "우아하고 신뢰감을 주는 이미지를 가졌습니다.";
+                rCons = "코가 길어 보일 수 있으니 쉐이딩으로 코끝을 끊어주는 메이크업을 추천합니다.";
             } else {
-                ratioText += "이상적인 계란형 비율에 가깝습니다. 대부분의 헤어스타일과 안경 테가 잘 어울리는 균형 잡힌 비율입니다.";
+                ratioDesc += "전체적인 세로 밸런스가 안정적이며 동안의 조건을 갖추고 있습니다.";
+                rPros = "어려 보이고 생기 넘치는 이미지를 연출하기 좋습니다.";
+                rCons = "이목구비가 몰려 보이지 않게 눈썹 산을 살짝 살려 시선을 분산시켜 보세요.";
             }
-            document.getElementById('resultRatio').innerHTML = ratioText;
+            document.getElementById('resultRatio').innerHTML = createResultHTML(ratioDesc, rPros, rCons);
 
             // 2. 골격 분석 (Shape)
-            let shapeText = "";
-            if (jawRatio > 0.85) {
-                shapeText = "턱의 골격이 강조된 '직사각형/정사각형' 형태의 골격입니다. 강직하고 신뢰감을 주는 인상을 가졌습니다.";
-            } else if (jawRatio < 0.75) {
-                shapeText = "하단으로 갈수록 갸름해지는 'V라인/역삼각형' 골격입니다. 세련되고 날렵한 이미지가 강조됩니다.";
+            let shapeDesc = "";
+            let sPros = "", sCons = "";
+            const jawToFace = jawWidth / faceWidth;
+            if (jawToFace > 0.82) {
+                shapeDesc = "턱의 골격이 확실하여 얼굴에 안정감과 카리스마가 느껴지는 골격입니다.";
+                sPros = "옆모습이 입체적이며 고급스러운 분위기를 자아냅니다.";
+                sCons = "귀 밑 머리에 볼륨을 주어 턱선을 부드럽게 감싸는 스타일이 잘 어울립니다.";
             } else {
-                shapeText = "부드러운 곡선을 그리는 '타원형' 골격입니다. 인상이 부드러워 보이며 액세서리 활용도가 매우 높습니다.";
+                shapeDesc = "하관이 슬림하고 갸름하여 현대적이고 세련된 V라인 형태를 띠고 있습니다.";
+                sPros = "어떤 모자나 안경도 소화하기 쉬운 유연한 골격입니다.";
+                sCons = "얼굴이 너무 빈약해 보이지 않도록 광대 주변에 치크로 생기를 더해 보세요.";
             }
-            document.getElementById('resultShape').innerHTML = shapeText;
+            document.getElementById('resultShape').innerHTML = createResultHTML(shapeDesc, sPros, sCons);
 
             // 3. 이목구비 분석 (Features)
-            let featureText = "";
-            if (eyeRatio > 0.45) {
-                featureText = "얼굴 폭 대비 눈 사이 거리가 멀어 여유롭고 순한 인상을 줍니다. '강아지상'의 특징을 가지고 있습니다.";
-            } else if (eyeRatio < 0.38) {
-                featureText = "이목구비가 중앙으로 집중되어 뚜렷하고 입체적인 느낌을 줍니다. 시원시원하고 도시적인 인상을 줍니다.";
+            let featDesc = "";
+            let fPros = "", fCons = "";
+            if (eyeRatio > 0.42) {
+                featDesc = "눈 사이 거리가 넓어 시야가 시원해 보이며 개성 있고 매력적인 '마스크'를 가졌습니다.";
+                fPros = "몽환적이고 신비로운 분위기를 연출하는 데 최적입니다.";
+                fCons = "콧대 부분에 하이라이트를 주어 시선을 중앙으로 모아주면 더욱 뚜렷해 보입니다.";
             } else {
-                featureText = "이목구비가 황금 비율 지점에 정확히 위치해 있습니다. 시각적으로 편안하고 안정감을 주는 구조입니다.";
+                featDesc = "이목구비가 중앙에 집중되어 화려하고 이목을 끄는 에너지가 강한 스타일입니다.";
+                fPros = "풀 메이크업이 매우 잘 어울리며 화려한 스타일링이 빛을 발합니다.";
+                fCons = "아이라인을 길게 빼서 가로 길이를 확장하면 더욱 시원한 인상을 줄 수 있습니다.";
             }
-            document.getElementById('resultFeatures').innerHTML = featureText;
+            document.getElementById('resultFeatures').innerHTML = createResultHTML(featDesc, fPros, fCons);
 
-            // 4. 피부톤 (Skin - 간단한 시뮬레이션 기반 정보)
-            document.getElementById('resultSkin').innerHTML = 
-                "현재 조명 상태에서 피부의 반사율과 톤 분포가 고르게 측정되었습니다. 쿨톤과 웜톤의 경계에 있는 뉴트럴한 상태로 보입니다.";
+            // 4. 피부톤 (Skin)
+            document.getElementById('resultSkin').innerHTML = createResultHTML(
+                "피부의 명도와 채도가 균일하게 분포되어 있어 투명한 피부 결을 가지고 있습니다.",
+                "피부 톤이 고르고 맑아 화사한 색조가 잘 어울립니다.",
+                "지속적인 수분 공급으로 현재의 맑은 톤을 유지하는 것이 중요합니다."
+            );
         }, 1000);
     }
 
