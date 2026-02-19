@@ -231,6 +231,80 @@ footer {
 .modal-body h3 { margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1.1rem; color: var(--text-primary); }
 .modal-body p { margin-bottom: 1rem; color: var(--text-secondary); }
 
+.result-section h3 { text-align: center; margin-bottom: 2rem; color: var(--accent-color); }
+
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+}
+
+.card-header {
+    background: rgba(56, 189, 248, 0.1);
+    padding: 1rem;
+    font-weight: 700;
+    border-bottom: 1px solid var(--glass-border);
+    color: var(--accent-color);
+}
+
+.card-body { padding: 1.5rem; font-size: 0.9rem; }
+
+.reset-btn {
+    display: block;
+    margin: 2rem auto 0;
+    background: transparent;
+    border: 1px solid var(--accent-color);
+    color: var(--accent-color);
+    padding: 0.8rem 2rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.reset-btn:hover { background: var(--accent-color); color: var(--bg-color); }
+
+/* 분석 가이드 요약 스타일 */
+.analysis-guide-brief {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 3rem;
+    padding-top: 3rem;
+    border-top: 1px dashed var(--glass-border);
+}
+
+.guide-item h4 {
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.guide-item h4::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 14px;
+    background: var(--accent-color);
+    margin-right: 8px;
+    border-radius: 2px;
+}
+
+.guide-item p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
 /* 분석 중 스캔 효과 및 로딩바 */
 .image-wrapper { position: relative; border-radius: 1rem; overflow: hidden; }
 #faceCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
