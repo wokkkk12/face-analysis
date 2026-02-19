@@ -116,77 +116,97 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('previewSection').classList.add('hidden');
             document.getElementById('resultSection').classList.remove('hidden');
 
-            // --- [1] 정밀 좌표 및 지표 계산 ---
-            const faceWidth = Math.abs(lm[234].x - lm[454].x);
-            const faceHeight = Math.abs(lm[10].y - lm[152].y);
-            const jawWidth = Math.abs(lm[172].x - lm[397].x);
-            const foreheadWidth = Math.abs(lm[103].x - lm[332].x);
-
+            // --- [1] 정밀 좌표 기반 전문 지표 계산 ---
             const topFace = Math.abs(lm[10].y - lm[168].y);
             const midFace = Math.abs(lm[168].y - lm[2].y);
             const bottomFace = Math.abs(lm[2].y - lm[152].y);
-            const totalHeight = topFace + midFace + bottomFace;
+            const totalH = topFace + midFace + bottomFace;
+            const vR = [ (topFace/totalH*3).toFixed(2), (midFace/totalH*3).toFixed(2), (bottomFace/totalH*3).toFixed(2) ];
 
-            const vRatios = [
-                (topFace / totalHeight * 3).toFixed(2),
-                (midFace / totalHeight * 3).toFixed(2),
-                (bottomFace / totalHeight * 3).toFixed(2)
-            ];
-            const hwRatio = (faceHeight / faceWidth).toFixed(2);
-            const jfRatio = (jawWidth / faceWidth).toFixed(2);
-            const ffRatio = (foreheadWidth / faceWidth).toFixed(2);
+            const fW = Math.abs(lm[234].x - lm[454].x);
+            const foreheadW = Math.abs(lm[103].x - lm[332].x);
+            const jawW = Math.abs(lm[172].x - lm[397].x);
+            const fH = Math.abs(lm[10].y - lm[152].y);
+            const aspect = (fH / fW).toFixed(2);
+            const jawToForehead = (jawW / foreheadW).toFixed(2);
 
-            // --- [2] 실시간 피부색 분석 (Pixel Sampling) ---
-            // 볼 부근(landmark 117, 346)의 픽셀 데이터를 가져옵니다.
+            const eyeDist = Math.abs(lm[133].x - lm[362].x);
+            const eyeW = Math.abs(lm[133].x - lm[33].x);
+            const eyeSpacing = (eyeDist / eyeW).toFixed(2);
+            const leftTilt = (lm[33].y - lm[133].y);
+            const isUpturned = leftTilt < 0;
+
             const canvas = document.getElementById('faceCanvas');
             const context = canvas.getContext('2d', { willReadFrequently: true });
-            const sampleX = Math.floor(lm[117].x * canvas.width);
-            const sampleY = Math.floor(lm[117].y * canvas.height);
-            const pixel = context.getImageData(sampleX, sampleY, 1, 1).data;
-            
-            const r = pixel[0], g = pixel[1], b = pixel[2];
+            const sample = context.getImageData(Math.floor(lm[117].x * canvas.width), Math.floor(lm[117].y * canvas.height), 1, 1).data;
+            const r = sample[0], g = sample[1], b = sample[2];
             const brightness = (r + g + b) / 3;
-            const isWarm = r > b + 10; // Red가 Blue보다 높으면 웜톤 성향
 
-            // --- [3] 결과 생성 헬퍼 함수 ---
-            const getResult = (category) => {
-                const data = {
-                    ratio: [
-                        { cond: vRatios[1] > 1.15, desc: `중안부(${vRatios[1]})가 강조된 세련된 도시형 비율입니다.`, pros: "지적이고 신뢰감을 주는 '커리어 우먼/맨'의 인상을 가졌습니다.", cons: "눈 밑 애교살 강조나 가로형 치크로 시선을 분산시키는 것을 추천합니다." },
-                        { cond: vRatios[2] > 1.10, desc: `하안부(${vRatios[2]})의 존재감이 느껴지는 에너제틱한 비율입니다.`, pros: "활동적이고 건강한 이미지를 주며, 입체감이 매우 좋습니다.", cons: "입술 산을 둥글게 그리거나 오버립 메이크업을 통해 밸런싱해 보세요." },
-                        { cond: true, desc: "황금비율에 근접한 수직 밸런스를 보여줍니다.", pros: "어떤 메이크업이나 헤어도 소화 가능한 균형 잡힌 비율입니다.", cons: "특별한 단점은 없으나, 눈썹의 각도를 살려 개성을 더해보세요." }
-                    ],
-                    shape: [
-                        { cond: hwRatio > 1.35 && jfRatio < 0.8, desc: "세련미가 돋보이는 '슬림 타원형' 얼굴형입니다.", pros: "얼굴이 작아 보이며, 사진 촬영 시 각도에 구애받지 않는 실루엣입니다.", cons: "사이드뱅이나 굵은 S컬 펌으로 가로 볼륨을 채워주세요." },
-                        { cond: jfRatio > 0.83, desc: "우아한 매력이 공존하는 '클래식 정방형' 골격입니다.", pros: "고급스러운 아우라와 탄탄한 페이스 라인을 가졌습니다.", cons: "귀걸이를 드롭형으로 착용해 시선을 아래로 길게 빼주세요." },
-                        { cond: true, desc: "부드러운 '계란형/하트형'의 이상적인 골격입니다.", pros: "친근하고 사랑스러운 이미지를 주며 인상이 매우 부드럽습니다.", cons: "이마 폭에 맞춰 잔머리 컷으로 헤어 라인을 정리하면 더 완벽해집니다." }
-                    ],
-                    features: [
-                        { cond: Math.abs(lm[133].x - lm[362].x) / faceWidth > 0.43, desc: "눈 사이 거리가 여유로운 '개방형' 이목구비입니다.", pros: "신비로운 분위기를 자아내며 개성 있는 마스크가 매력적입니다.", cons: "앞트임 효과 아이라인 기법으로 눈매의 선명도를 높여보세요." },
-                        { cond: true, desc: "이목구비가 중앙으로 집중되어 뚜렷한 인상을 줍니다.", pros: "멀리서도 시선을 사로잡는 화려하고 도시적인 이미지를 가졌습니다.", cons: "눈꼬리를 뒤로 길게 빼는 음영 메이크업으로 가로 폭을 확장해 보세요." }
-                    ],
-                    skin: [
-                        { cond: isWarm && brightness > 180, desc: "밝고 화사한 '봄 웜톤' 성향의 피부색입니다.", pros: "따뜻한 색감의 파스텔 톤이나 코랄 색상이 매우 잘 어울립니다.", cons: "푸른기가 도는 쿨한 컬러는 얼굴을 창백하게 만들 수 있으니 주의하세요." },
-                        { cond: !isWarm && brightness > 180, desc: "투명하고 맑은 '여름 쿨톤' 성향의 피부색입니다.", pros: "깨끗하고 청량한 이미지이며, 실버 액세서리가 특히 빛납니다.", cons: "노란기가 강한 골드나 오렌지 컬러는 피하시는 것이 좋습니다." },
-                        { cond: isWarm, desc: "차분하고 깊이 있는 '가을 웜톤' 성향의 피부색입니다.", pros: "지적이고 성숙한 분위기를 풍기며 골드 주얼리가 잘 어울립니다.", cons: "너무 밝은 형광색보다는 톤다운된 어스(Earth) 컬러를 선택하세요." },
-                        { cond: true, desc: "카리스마 있는 '겨울 쿨톤' 성향의 피부색입니다.", pros: "대비감이 강한 블랙이나 원색이 이목구비를 더 살려줍니다.", cons: "흐릿한 베이지색보다는 선명한 컬러로 포인트를 주는 것이 베스트입니다." }
-                    ]
+            // --- [2] 전문가 데이터 기반 결과 매칭 ---
+            const getExpertAnalysis = () => {
+                const results = {
+                    ratio: { desc: "", pros: "", cons: "" },
+                    shape: { desc: "", pros: "", cons: "" },
+                    feat: { desc: "", pros: "", cons: "" },
+                    skin: { desc: "", pros: "", cons: "" }
                 };
-                const match = data[category].find(item => item.cond);
-                return `
-                    <p class="analysis-desc">${match.desc}</p>
+
+                if (vR[1] > 1.08) {
+                    results.ratio.desc = `중안부가 발달한(${vR[1]}) 성숙하고 우아한 '엘레강스' 비율입니다.`;
+                    results.ratio.pros = "지적이고 차분한 분위기를 주며 코의 선이 강조되어 입체감이 좋습니다.";
+                    results.ratio.cons = "가로로 긴 안경테나 블러셔를 중앙부에 넓게 펴 발라 시선을 가로로 분산시키면 훨씬 부드러워 보입니다.";
+                } else if (vR[2] < 0.9) {
+                    results.ratio.desc = `하안부가 짧은(${vR[2]}) '베이비페이스'형 동안 비율을 갖추고 있습니다.`;
+                    results.ratio.pros = "실제 나이보다 훨씬 어려 보이며 친근하고 귀여운 이미지가 강점입니다.";
+                    results.ratio.cons = "턱끝에 하이라이트를 주어 수직감을 살짝 더해주면 세련된 느낌을 추가할 수 있습니다.";
+                } else {
+                    results.ratio.desc = "수직/수평 밸런스가 황금비율에 완벽히 부합하는 '조화형' 비율입니다.";
+                    results.ratio.pros = "안정감이 매우 뛰어나며 클래식하고 정돈된 미적 완성도가 높습니다.";
+                    results.ratio.cons = "어떤 스타일도 소화 가능하므로 과감한 트렌디 메이크업에 도전해 보세요.";
+                }
+
+                if (aspect > 1.3 && jawToForehead < 0.85) {
+                    results.shape.desc = "세로 폭이 강조되면서 하단이 슬림한 '귀족적 타원형' 골격입니다.";
+                    results.shape.pros = "슬림하고 도시적인 실루엣을 가졌으며 목선이 길어 보이는 효과가 있습니다.";
+                    results.shape.cons = "사이드 볼륨을 살린 레이어드 컷이나 굵은 웨이브가 긴 얼굴형을 보완해 줍니다.";
+                } else if (jawToForehead > 0.95) {
+                    results.shape.desc = "안정감이 느껴지는 하단 골격의 '클래식 정방형/페어형'입니다.";
+                    results.shape.pros = "에너지가 넘치고 강인한 매력이 있으며, 턱선이 주는 고급스러운 아우라가 독보적입니다.";
+                    results.shape.cons = "앞머리를 옆으로 넘겨 이마 폭을 확보하고 턱선을 시원하게 드러내는 커트가 베스트입니다.";
+                } else {
+                    results.shape.desc = "곡선과 직선의 밸런스가 좋은 '이상적 계란형' 골격입니다.";
+                    results.shape.pros = "페이스 라인이 매끄러워 어떤 각도에서도 굴곡 없는 부드러운 인상을 줍니다.";
+                    results.shape.cons = "얼굴형이 예쁘므로 포니테일이나 업스타일로 헤어 라인을 모두 드러내 보시길 추천합니다.";
+                }
+
+                const eyeType = isUpturned ? "상향형(Cat-eye)" : "하향형(Puppy-eye)";
+                results.feat.desc = `눈매가 ${eyeType}이며 미간 간격이 ${eyeSpacing > 1.05 ? '넓은' : '집중된'} 개성 있는 눈매입니다.`;
+                results.feat.pros = isUpturned ? "눈매가 매혹적이고 힘이 있어 카리스마 있는 표정 연출에 유리합니다." : "선하고 맑은 눈매를 가져 상대방에게 높은 신뢰감과 호감을 줍니다.";
+                results.feat.cons = eyeSpacing > 1.05 ? "미간 사이 음영을 주어 콧대를 세우면 시선이 집중되어 더 뚜렷해 보입니다." : "눈꼬리를 뒤로 길게 빼서 얼굴의 여백을 조절하면 비율이 더 완벽해집니다.";
+
+                const tone = (r > b + 15) ? "웜(Warm)" : (b > r + 5) ? "쿨(Cool)" : "뉴트럴(Neutral)";
+                results.skin.desc = `측정된 피부톤은 ${tone} 톤이며 밝기는 ${brightness > 180 ? '밝고 맑은' : '차분하고 건강한'} 상태입니다.`;
+                results.skin.pros = `피부의 색조 대비가 좋아 특정 컬러(골드/실버) 사용 시 이목구비가 확 살아나는 타입입니다.`;
+                results.skin.cons = tone === "웜" ? "오렌지, 코랄, 골드 브라운 컬러의 메이크업이 베스트입니다." : tone === "쿨" ? "라벤더, 핑크, 애쉬 베이지 컬러의 메이크업을 시도해 보세요." : "모든 뉴트럴 컬러를 소화할 수 있는 축복받은 톤입니다.";
+
+                return results;
+            };
+
+            const expert = getExpertAnalysis();
+            const render = (target, data) => {
+                document.getElementById(target).innerHTML = `
+                    <p class="analysis-desc">${data.desc}</p>
                     <div class="pros-cons">
-                        <div class="pros"><strong>✨ 매력 포인트:</strong> ${match.pros}</div>
-                        <div class="cons"><strong>🎨 스타일링 팁:</strong> ${match.cons}</div>
+                        <div class="pros"><strong>✨ 전문가 리포트:</strong> ${data.pros}</div>
+                        <div class="cons"><strong>🎨 컨설팅 가이드:</strong> ${data.cons}</div>
                     </div>
                 `;
             };
 
-            // --- [4] 결과 출력 ---
-            document.getElementById('resultRatio').innerHTML = getResult('ratio');
-            document.getElementById('resultShape').innerHTML = getResult('shape');
-            document.getElementById('resultFeatures').innerHTML = getResult('features');
-            document.getElementById('resultSkin').innerHTML = getResult('skin');
+            render('resultRatio', expert.ratio);
+            render('resultShape', expert.shape);
+            render('resultFeatures', expert.feat);
+            render('resultSkin', expert.skin);
         }, 1000);
     }
 
