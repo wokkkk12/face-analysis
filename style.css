@@ -174,8 +174,6 @@ footer {
 
 .disclaimer { font-size: 0.8rem; color: var(--text-secondary); max-width: 600px; margin: 2rem auto 0; }
 
-.hidden { display: none; }
-
 /* 모달 스타일 */
 .modal-overlay {
     position: fixed;
@@ -238,3 +236,6 @@ footer {
 #faceCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 .progress-bar { width: 100%; height: 6px; background: #1e293b; border-radius: 3px; margin-top: 1rem; }
 .progress-fill { width: 0%; height: 100%; background: var(--accent-color); transition: width 0.3s; }
+
+/* 유틸리티 클래스 */
+.hidden { display: none !important; }
