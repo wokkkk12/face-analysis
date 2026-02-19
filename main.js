@@ -116,26 +116,55 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('previewSection').classList.add('hidden');
             document.getElementById('resultSection').classList.remove('hidden');
 
+            // --- 정밀 데이터 계산 ---
             const faceHeight = Math.abs(lm[10].y - lm[152].y);
             const faceWidth = Math.abs(lm[234].x - lm[454].x);
             const ratio = (faceHeight / faceWidth).toFixed(2);
 
-            // 1. 비율 분석
-            document.getElementById('resultRatio').innerHTML = 
-                `측정된 세로/가로 비율은 <strong>${ratio}:1</strong>입니다. ` +
-                (ratio > 1.3 ? "이상적인 계란형 비율에 해당하여 다양한 스타일이 잘 어울립니다." : "안정적인 비율을 가진 얼굴형으로 차분한 인상을 줍니다.");
+            // 광대 대비 턱 너비 (얼굴형 판단용)
+            const jawWidth = Math.abs(lm[172].x - lm[397].x);
+            const jawRatio = (jawWidth / faceWidth).toFixed(2);
 
-            // 2. 골격 분석
-            document.getElementById('resultShape').innerHTML = 
-                "턱선과 광대의 연결이 매끄러운 곡선을 이루고 있습니다. 이는 인상을 부드럽게 만들어주며 안경이나 액세서리 활용도가 높습니다.";
+            // 눈 사이 거리 (이목구비 특징용)
+            const eyeDist = Math.abs(lm[133].x - lm[362].x);
+            const eyeRatio = (eyeDist / faceWidth).toFixed(2);
 
-            // 3. 이목구비 분석
-            document.getElementById('resultFeatures').innerHTML = 
-                "눈의 위치가 얼굴 전체 폭의 황금 지점에 위치하고 있어 시각적인 안정감을 제공합니다. 코의 각도가 입체적인 실루엣을 만듭니다.";
+            // 1. 비율 분석 (Ratio)
+            let ratioText = `측정된 세로/가로 비율은 <strong>${ratio}:1</strong>입니다. `;
+            if (ratio > 1.4) {
+                ratioText += "세로 비율이 다소 높은 '긴 얼굴형'에 해당합니다. 앞머리를 내리거나 가로 볼륨을 살리는 헤어스타일이 조화롭습니다.";
+            } else if (ratio < 1.2) {
+                ratioText += "가로와 세로의 편차가 적은 '둥근/각진 얼굴형'입니다. 시선을 위아래로 분산시키는 스타일링이 효과적입니다.";
+            } else {
+                ratioText += "이상적인 계란형 비율에 가깝습니다. 대부분의 헤어스타일과 안경 테가 잘 어울리는 균형 잡힌 비율입니다.";
+            }
+            document.getElementById('resultRatio').innerHTML = ratioText;
 
-            // 4. 피부톤 (시뮬레이션 기반 정보)
+            // 2. 골격 분석 (Shape)
+            let shapeText = "";
+            if (jawRatio > 0.85) {
+                shapeText = "턱의 골격이 강조된 '직사각형/정사각형' 형태의 골격입니다. 강직하고 신뢰감을 주는 인상을 가졌습니다.";
+            } else if (jawRatio < 0.75) {
+                shapeText = "하단으로 갈수록 갸름해지는 'V라인/역삼각형' 골격입니다. 세련되고 날렵한 이미지가 강조됩니다.";
+            } else {
+                shapeText = "부드러운 곡선을 그리는 '타원형' 골격입니다. 인상이 부드러워 보이며 액세서리 활용도가 매우 높습니다.";
+            }
+            document.getElementById('resultShape').innerHTML = shapeText;
+
+            // 3. 이목구비 분석 (Features)
+            let featureText = "";
+            if (eyeRatio > 0.45) {
+                featureText = "얼굴 폭 대비 눈 사이 거리가 멀어 여유롭고 순한 인상을 줍니다. '강아지상'의 특징을 가지고 있습니다.";
+            } else if (eyeRatio < 0.38) {
+                featureText = "이목구비가 중앙으로 집중되어 뚜렷하고 입체적인 느낌을 줍니다. 시원시원하고 도시적인 인상을 줍니다.";
+            } else {
+                featureText = "이목구비가 황금 비율 지점에 정확히 위치해 있습니다. 시각적으로 편안하고 안정감을 주는 구조입니다.";
+            }
+            document.getElementById('resultFeatures').innerHTML = featureText;
+
+            // 4. 피부톤 (Skin - 간단한 시뮬레이션 기반 정보)
             document.getElementById('resultSkin').innerHTML = 
-                "현재 조명 상태에서 피부톤이 고르게 분포되어 있습니다. 수분 보습에 집중하시면 더욱 맑은 피부 결을 유지하실 수 있습니다.";
+                "현재 조명 상태에서 피부의 반사율과 톤 분포가 고르게 측정되었습니다. 쿨톤과 웜톤의 경계에 있는 뉴트럴한 상태로 보입니다.";
         }, 1000);
     }
 
